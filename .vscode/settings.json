@@ -1,0 +1,14 @@
+{
+	"cmake.debugConfig": {
+		"environment": [
+			{
+				"name": "PATH",
+				"value": "build\\src"
+			}
+		]
+	},
+	"files.associations": {
+		"chrono": "cpp",
+		"vector": "cpp"
+	}
+}
