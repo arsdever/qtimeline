@@ -11,6 +11,7 @@ include ($ENV{VCPKG_DIR}/scripts/buildsystems/vcpkg.cmake)
 option (ENABLE_TESTING "Enable the testing of the project" ON)
 project (timeline)
 
+add_subdirectory (prof)
 add_subdirectory (src)
 add_subdirectory (sample)
 
