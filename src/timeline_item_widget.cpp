@@ -33,14 +33,14 @@ namespace tl
         QPainter painter { this };
         painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
         QLinearGradient bg_gradient(rect().topLeft(), rect().bottomLeft());
-        bg_gradient.setColorAt(0, palette().button().color().lighter(200));
+        bg_gradient.setColorAt(0, palette().button().color().lighter());
         bg_gradient.setColorAt(1, palette().button().color());
         painter.setBrush(QBrush { bg_gradient });
         if (_hovering)
-            painter.setPen(QPen { palette().highlight(), 2 });
+            painter.setPen(QPen { palette().highlight(), 1 });
         else
-            painter.setPen(QPen { palette().buttonText(), 2 });
-        painter.drawRoundedRect(rect(), 7, 7);
+            painter.setPen(QPen { palette().buttonText(), 1 });
+        painter.drawRoundedRect(rect(), 5, 5);
         painter.setBrush(Qt::NoBrush);
         if (_hovering)
             painter.setPen(QPen { palette().highlightedText(), 1 });
