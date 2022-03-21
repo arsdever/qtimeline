@@ -11,6 +11,7 @@ class QLabel;
 namespace tl
 {
 
+    class timeline_timestamps;
     class timeline_data_provider;
     class single_timeline;
 
@@ -45,6 +46,8 @@ namespace tl
     private:
         double                     _scale;
         timeline_data_provider_ptr _data_source;
+        timeline_timestamps*       _timestamps;
+        QLayout*                   _timelines;
     };
 
 } // namespace tl

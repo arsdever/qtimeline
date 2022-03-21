@@ -1,6 +1,6 @@
-#include "single_timeline.hpp"
-
 #include <QResizeEvent>
+
+#include "single_timeline.hpp"
 
 #include "timeline_item.hpp"
 #include "timeline_item_widget.hpp"
@@ -11,6 +11,7 @@ namespace tl
     single_timeline::single_timeline(QWidget* parent)
         : QWidget { parent }
     {
+        setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
     }
 
     void single_timeline::add_element(const_timeline_item_ptr item) { new timeline_item_widget(item, this); }

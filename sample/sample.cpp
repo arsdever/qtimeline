@@ -60,7 +60,7 @@ int main(int argc, char** argv)
 
     tl::timeline* wdg = new tl::timeline {};
     wdg->set_data_provider(provider);
-    wdg->set_scale(10);
+    wdg->set_scale(100);
     scroll.setWidget(wdg);
     scroll.setWidgetResizable(true);
     scroll.show();

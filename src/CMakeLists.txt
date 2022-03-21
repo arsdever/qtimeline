@@ -1,5 +1,5 @@
-set (SOURCES timeline.cpp single_timeline.cpp timeline_item_widget.cpp)
-set (HEADERS timeline.hpp single_timeline.hpp timeline_item_widget.hpp timeline_item.hpp timeline_data_provider.hpp)
+set (SOURCES timeline.cpp single_timeline.cpp timeline_item_widget.cpp timeline_timestamps.cpp)
+set (HEADERS timeline.hpp single_timeline.hpp timeline_item_widget.hpp timeline_item.hpp timeline_data_provider.hpp timeline_timestamps.hpp)
 
 find_package (Qt6Widgets REQUIRED)
 
