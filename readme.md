@@ -4,4 +4,4 @@ The initial aim of the project is to provide a way to visualize the profiler dat
 [arsdever/prof](https://github.com/arsdever/prof).
 
 Such an example you can see under `sample` project. Here is the outcome whe the program is run.
-[[https://github.com/arsdever/timeline/blob/main/doc/img/profiler_timeline.png|alt=profiler_timeline]]
+![](doc/img/profiler_timeline.png)
