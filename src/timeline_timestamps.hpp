@@ -18,8 +18,12 @@ namespace tl
         void paintEvent(QPaintEvent* evt) override;
 
     private:
-    	// pixels per second
+        QString prettify(int seconds) const;
+
+    private:
+        // pixels per second
         double _scale;
+        double _visualScale;
     };
 
 } // namespace tl

@@ -14,7 +14,19 @@ namespace tl
         setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     }
 
-    void timeline_timestamps::recalculate(double scale) { _scale = scale; }
+    void timeline_timestamps::recalculate(double scale)
+    {
+        _scale       = scale;
+        _visualScale = _scale;
+        while (_visualScale < 30)
+            {
+                _visualScale *= 2.0;
+            }
+        while (_visualScale > 60)
+            {
+                _visualScale /= 2.0;
+            }
+    }
 
     void timeline_timestamps::paintEvent(QPaintEvent* evt)
     {
@@ -30,19 +42,33 @@ namespace tl
         painter.drawLine(evt->rect().bottomLeft(), evt->rect().bottomRight());
         painter.setPen(palette().buttonText().color());
 
-        int first_line = evt->rect().left() / _scale;
-        int last_line  = evt->rect().right() / _scale + 1;
+        int first_line = evt->rect().left() / _visualScale;
+        int last_line  = evt->rect().right() / _visualScale + 1;
         for (; first_line <= last_line; ++first_line)
             {
-                QString time_string { tr("00:%1").arg(first_line) };
-                painter.drawText(QPointF { first_line * _scale -
-                                              painter.fontMetrics().size(Qt::TextSingleLine, time_string).width() / 2.0,
-                                          10 },
-                                 time_string);
-                painter.drawLine(first_line * _scale, 20, first_line * _scale, 30);
+                QString time_string { prettify(first_line * _visualScale / _scale) };
+                painter.drawText(
+                    QPointF { first_line * _visualScale -
+                                  painter.fontMetrics().size(Qt::TextSingleLine, time_string).width() / 2.0,
+                              10 },
+                    time_string);
+                painter.drawLine(first_line * _visualScale, 20, first_line * _visualScale, 30);
             }
 
         return QWidget::paintEvent(evt);
+    }
+
+    QString timeline_timestamps::prettify(int seconds) const
+    {
+        QString result { "%1:%2" };
+        int     minutes = 0;
+        while (seconds > 59)
+            {
+                ++minutes;
+                seconds -= 60;
+            }
+
+        return result.arg(minutes, 2, 10, QChar { '0' }).arg(seconds, 2, 10, QChar { '0' });
     }
 
 } // namespace tl
