@@ -1,14 +1,29 @@
 {
+	"cmake.configureArgs": [
+		// "-DVCPKG_TARGET_TRIPLET=x64-windows",
+		"-DCMAKE_TOOLCHAIN_FILE=${env:VCPKG_DIR}/scripts/buildsystems/vcpkg.cmake",
+	],
 	"cmake.debugConfig": {
 		"environment": [
 			{
 				"name": "PATH",
 				"value": "build\\src"
 			}
-		]
+		],
+		"stopAtEntry": false,
+		"MIMode": "lldb",
+		"miDebuggerPath": "/Users/felikz/.vscode/extensions/ms-vscode.cpptools-0.20.1/debugAdapters/lldb/bin/lldb-mi",
+		"logging": {
+			"trace": true,
+			"engineLogging": true,
+			"traceResponse": true
+		}
 	},
 	"files.associations": {
 		"chrono": "cpp",
-		"vector": "cpp"
+		"vector": "cpp",
+		"xhash": "cpp",
+		"unordered_map": "cpp",
+		"xstring": "cpp"
 	}
 }
