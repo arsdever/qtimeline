@@ -6,4 +6,4 @@ set(CMAKE_AUTOUIC ON)
 
 add_executable(drawsample sample.cpp)
 
-target_link_libraries(drawsample qtimeline Qt::Gui)
+target_link_libraries(drawsample qtimeline Qt::Gui prof::profiler)

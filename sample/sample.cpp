@@ -1,8 +1,48 @@
+#include <QRandomGenerator>
 #include <QStandardItemModel>
+#include <QString>
 #include <qapplication.h>
 #include <qscrollarea.h>
 #include <qstylefactory.h>
 #include <qtimeline.hpp>
+
+#include "prof/frame.hpp"
+#include "prof/profiler.hpp"
+#include "prof/profiler_scope_keeper.hpp"
+
+class unit
+{
+public:
+    unit() { }
+
+    void multithreaded_load()
+    {
+        std::vector<std::thread> threads;
+        for (int i = 0; i < 10; ++i)
+            {
+                threads.emplace_back([ this ]() {
+                    while (counter > 0)
+                        {
+                            auto p = prof::profile(__func__);
+                            std::lock_guard<std::mutex> guard(mutex);
+                            std::this_thread::sleep_for(
+                                std::chrono::milliseconds(100));
+                            --counter;
+                        }
+
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                });
+            }
+
+        for (auto& thread : threads)
+            {
+                thread.join();
+            }
+    }
+
+    long       counter = 10;
+    std::mutex mutex;
+};
 
 void setupDarkThemePalette()
 {
@@ -26,40 +66,61 @@ void setupDarkThemePalette()
 
     qApp->setPalette(darkPalette);
 
-    qApp->setStyleSheet("QToolTip { color: #ffffff; background-color: #2a82da; border: 1px solid white; }");
+    qApp->setStyleSheet("QToolTip { color: #ffffff; background-color: #2a82da; "
+                        "border: 1px solid white; }");
 }
 
 int main(int argc, char** argv)
 {
     QApplication app(argc, argv);
 
+    unit u;
+    u.multithreaded_load();
+
     setupDarkThemePalette();
 
-    QTimeLine timeline;
-    timeline.show();
+    QList<QTimeLine*>          timelines;
+    QList<QStandardItemModel*> models;
+    const auto                 time = std::chrono::high_resolution_clock::now();
 
-    QStandardItemModel model;
-    QStandardItem*     layer1   = new QStandardItem("Layer 1");
-    QStandardItem*     section1 = new QStandardItem("Section 1");
-    QStandardItem*     section2 = new QStandardItem("Section 2");
-    layer1->setData(QColor(255, 0, 0), Qt::DecorationRole);
-    section1->setData(1.0f, Qt::UserRole + 1);
-    section1->setData(2.0f, Qt::UserRole + 2);
-    section2->setData(4.0f, Qt::UserRole + 1);
-    section2->setData(2.0f, Qt::UserRole + 2);
-    layer1->appendColumn({ section1 });
-    layer1->appendColumn({ section2 });
-    QStandardItem* layer2   = new QStandardItem("Layer 2");
-    QStandardItem* section3 = new QStandardItem("Section 3");
-    layer2->setData(QColor(195, 140, 32), Qt::DecorationRole);
-    section3->setData(1.5f, Qt::UserRole + 1);
-    section3->setData(2.0f, Qt::UserRole + 2);
-    layer2->appendColumn({ section3 });
+    auto threads = prof::known_threads();
 
-    model.appendRow(layer1);
-    model.appendRow(layer2);
-
-    timeline.setModel(&model);
+    for (const auto& thd : threads)
+        {
+            QTimeLine*          timeline = new QTimeLine();
+            QStandardItemModel* model    = new QStandardItemModel();
+            timeline->show();
+            timeline->setModel(model);
+            timelines.append(timeline);
+            models.append(model);
+            QColor thread_color =
+                QColor::fromRgb(QRandomGenerator::global()->generate());
+            prof::apply_for_data(
+                thd,
+                [ &thread_color, &time, &model ](
+                    const prof::frame& data) -> bool {
+                    QStandardItem* layer   = new QStandardItem("Layer");
+                    QStandardItem* section = new QStandardItem("Section");
+                    layer->setData(thread_color, Qt::DecorationRole);
+                    layer->setData(QString("%1,%2")
+                                       .arg(data.name().c_str())
+                                       .arg(data.depth()),
+                                   Qt::ToolTipRole);
+                    auto  diff      = data.start() - time;
+                    float diffFloat = std::chrono::duration_cast<
+                                          std::chrono::duration<float>>(diff)
+                                          .count();
+                    section->setData(diffFloat + 5, Qt::UserRole + 1);
+                    diffFloat = std::chrono::duration_cast<
+                                    std::chrono::duration<float>>(data.end() -
+                                                                  data.start())
+                                    .count();
+                    section->setData(diffFloat, Qt::UserRole + 2);
+                    layer->appendColumn({ section });
+                    model->appendRow(layer);
+                    return true;
+                });
+        }
 
     return app.exec();
 }
