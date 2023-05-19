@@ -1,14 +1,18 @@
+#include <QPainter>
 #include <QRandomGenerator>
 #include <QStandardItemModel>
 #include <QString>
+#include <QTimer>
 #include <qapplication.h>
 #include <qscrollarea.h>
 #include <qstylefactory.h>
 #include <qtimeline.hpp>
 
-#include "prof/frame.hpp"
+#include "prof/data.hpp"
 #include "prof/profiler.hpp"
 #include "prof/profiler_scope_keeper.hpp"
+
+std::chrono::high_resolution_clock::time_point last_frame_time;
 
 class unit
 {
@@ -69,47 +73,174 @@ void setupDarkThemePalette()
                         "border: 1px solid white; }");
 }
 
+class HeavyDrawnWidget : public QWidget
+{
+public:
+    HeavyDrawnWidget(QWidget* parent = nullptr)
+        : QWidget(parent)
+    {
+    }
+
+protected:
+    void paintEvent(QPaintEvent* event) override
+    {
+        last_frame_time = std::chrono::high_resolution_clock::now();
+        auto     lock   = prof::profile_frame(__func__);
+        QPainter painter(this);
+        painter.setRenderHint(QPainter::Antialiasing);
+        painter.setPen(Qt::NoPen);
+        drawRects(painter);
+        drawCircles(painter);
+        drawLines(painter);
+        drawPoints(painter);
+        drawPie(painter);
+    }
+
+    void drawCircles(QPainter& painter)
+    {
+        auto lock = prof::profile(__func__);
+        for (int i = 0; i < 100; ++i)
+            {
+                painter.setBrush(QColor::fromRgb(QRandomGenerator::global()->generate()));
+                painter.drawEllipse(QPoint(QRandomGenerator::global()->generate() % width(),
+                                           QRandomGenerator::global()->generate() % height()),
+                                    QRandomGenerator::global()->generate() % 100,
+                                    QRandomGenerator::global()->generate() % 100);
+            }
+    }
+
+    void drawRects(QPainter& painter)
+    {
+        auto lock = prof::profile(__func__);
+        for (int i = 0; i < 100; ++i)
+            {
+                painter.setBrush(QColor::fromRgb(QRandomGenerator::global()->generate()));
+                painter.drawRect(QRect(
+                    QPoint(QRandomGenerator::global()->generate() % width(),
+                           QRandomGenerator::global()->generate() % height()),
+                    QSize(QRandomGenerator::global()->generate() % 100, QRandomGenerator::global()->generate() % 100)));
+            }
+    }
+
+    void drawLines(QPainter& painter)
+    {
+        auto lock = prof::profile(__func__);
+        for (int i = 0; i < 100; ++i)
+            {
+                painter.setBrush(QColor::fromRgb(QRandomGenerator::global()->generate()));
+                painter.drawLine(QPoint(QRandomGenerator::global()->generate() % width(),
+                                        QRandomGenerator::global()->generate() % height()),
+                                 QPoint(QRandomGenerator::global()->generate() % width(),
+                                        QRandomGenerator::global()->generate() % height()));
+            }
+    }
+
+    void drawPoints(QPainter& painter)
+    {
+        auto lock = prof::profile(__func__);
+        for (int i = 0; i < 100; ++i)
+            {
+                painter.setBrush(QColor::fromRgb(QRandomGenerator::global()->generate()));
+                painter.drawPoint(QPoint(QRandomGenerator::global()->generate() % width(),
+                                         QRandomGenerator::global()->generate() % height()));
+            }
+    }
+
+    void drawPie(QPainter& painter)
+    {
+        auto lock = prof::profile(__func__);
+        for (int i = 0; i < 100; ++i)
+            {
+                painter.setBrush(QColor::fromRgb(QRandomGenerator::global()->generate()));
+                painter.drawPie(QRect(QPoint(QRandomGenerator::global()->generate() % width(),
+                                             QRandomGenerator::global()->generate() % height()),
+                                      QSize(QRandomGenerator::global()->generate() % 100,
+                                            QRandomGenerator::global()->generate() % 100)),
+                                QRandomGenerator::global()->generate() % 100,
+                                QRandomGenerator::global()->generate() % 100);
+            }
+    }
+};
+
 int main(int argc, char** argv)
 {
     QApplication app(argc, argv);
 
-    unit u;
-    u.multithreaded_load();
+    // unit u;
+    // u.multithreaded_load();
 
     setupDarkThemePalette();
 
     QTabWidget window;
     window.show();
 
-    QList<QTimeLine*>          timelines;
-    QList<QStandardItemModel*> models;
-    const auto                 time = std::chrono::high_resolution_clock::now();
+    HeavyDrawnWidget widget;
+    widget.show();
 
-    auto threads = prof::known_threads();
+    std::unordered_map<std::string, QTimeLine*> timelines;
 
-    for (const auto& thd : threads)
-        {
-            QTimeLine*          timeline = new QTimeLine();
-            QStandardItemModel* model    = new QStandardItemModel(timeline);
-            timeline->show();
-            timeline->setModel(model);
-            window.addTab(timeline, QString("Thread #%1").arg(thd.c_str()));
-            QColor thread_color = QColor::fromRgb(QRandomGenerator::global()->generate());
-            prof::apply_for_data(thd, [ &thread_color, &time, &model ](const prof::frame& data) -> bool {
-                QStandardItem* layer   = new QStandardItem("Layer");
-                QStandardItem* section = new QStandardItem("Section");
-                layer->setData(thread_color, Qt::DecorationRole);
-                layer->setData(QString("%1,%2").arg(data.name().c_str()).arg(data.depth()), Qt::ToolTipRole);
-                auto  diff      = data.start() - time;
-                float diffFloat = std::chrono::duration_cast<std::chrono::duration<float>>(diff).count();
-                section->setData(diffFloat + 5, Qt::UserRole + 1);
-                diffFloat = std::chrono::duration_cast<std::chrono::duration<float>>(data.end() - data.start()).count();
-                section->setData(diffFloat, Qt::UserRole + 2);
-                layer->appendColumn({ section });
-                model->appendRow(layer);
-                return true;
-            });
-        }
+    QTimer timer;
+    timer.setInterval(10);
+    QColor thread_color = QColor::fromRgb(QRandomGenerator::global()->generate());
+    QObject::connect(&timer, &QTimer::timeout, [ & ]() {
+        auto threads = prof::known_threads();
+
+        for (const auto& thd : threads)
+            {
+                auto                it       = timelines.find(thd);
+                QTimeLine*          timeline = nullptr;
+                QStandardItemModel* model    = nullptr;
+
+                if (it == timelines.end())
+                    {
+                        timeline = new QTimeLine();
+                        model    = new QStandardItemModel(timeline);
+
+                        timeline->show();
+                        timeline->setModel(model);
+                        timelines.emplace(thd, timeline);
+                        window.addTab(timeline, QString("Thread #%1").arg(thd.c_str()));
+                    }
+                else
+                    {
+                        timeline = it->second;
+                        model    = static_cast<QStandardItemModel*>(timeline->model());
+                    }
+
+                model->clear();
+
+                std::vector<QStandardItem*> depths;
+
+                prof::apply_for_data(thd, [ &thread_color, &depths, &model ](const prof::data_sample& data) -> bool {
+                    QStandardItem* layer = nullptr;
+                    if (data.depth() >= depths.size() || depths[ data.depth() ] == nullptr)
+                        {
+                            depths.resize(std::max(data.depth() + 1, depths.size()), nullptr);
+                            layer                  = new QStandardItem(QString("Depth %1").arg(data.depth()));
+                            depths[ data.depth() ] = layer;
+                            model->appendRow(layer);
+                        }
+                    else
+                        {
+                            layer = depths[ data.depth() ];
+                        }
+
+                    QStandardItem* section = new QStandardItem("Section");
+                    layer->setData(thread_color, Qt::DecorationRole);
+                    layer->setData(QString("Depth %1").arg(data.depth()), Qt::ToolTipRole);
+                    auto  diff      = data.start() - last_frame_time;
+                    float diffFloat = std::chrono::duration_cast<std::chrono::duration<float>>(diff).count();
+                    section->setData(data.name().c_str(), Qt::ToolTipRole);
+                    section->setData(diffFloat, Qt::UserRole + 1);
+                    diffFloat =
+                        std::chrono::duration_cast<std::chrono::duration<float>>(data.end() - data.start()).count();
+                    section->setData(diffFloat, Qt::UserRole + 2);
+                    layer->appendColumn({ section });
+                    return true;
+                });
+            }
+    });
+    timer.start();
 
     return app.exec();
 }

@@ -6,6 +6,8 @@
 
 #include "qtimeline_item_delegate.hpp"
 
+#define MAGNIFICATION 10000.0f
+
 QTimeLineItemDelegate::QTimeLineItemDelegate(QObject* parent)
     : QAbstractItemDelegate(parent)
 {
@@ -36,8 +38,8 @@ void QTimeLineItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem&
         {
             auto   segment = item->child(0, i);
             QRectF rect    = option.rect;
-            rect.setLeft(segment->data(Qt::UserRole + 1).toFloat() * 20);
-            rect.setRight(rect.left() + segment->data(Qt::UserRole + 2).toFloat() * 20);
+            rect.setLeft(segment->data(Qt::UserRole + 1).toFloat() * MAGNIFICATION);
+            rect.setRight(rect.left() + segment->data(Qt::UserRole + 2).toFloat() * MAGNIFICATION);
             painter->setPen(QPen(color.darker(120), thickness));
             painter->setBrush(QBrush(color));
             painter->drawRect(rect.adjusted(thickness / 2.0f, thickness / 2.0f, -thickness / 2.0f, -thickness / 2.0f));
