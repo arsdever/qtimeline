@@ -17,6 +17,6 @@ public:
 #pragma endregion
 
 private:
-	// pixels per second
+    // pixels per second
     float _time_scale = 1.0f;
 };

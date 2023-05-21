@@ -1,16 +1,17 @@
+#include <QApplication>
 #include <QPainter>
+#include <QPushButton>
 #include <QRandomGenerator>
+#include <QScrollArea>
 #include <QStandardItemModel>
 #include <QString>
+#include <QStyleFactory>
 #include <QTimer>
-#include <qapplication.h>
-#include <qscrollarea.h>
-#include <qstylefactory.h>
-#include <qtimeline.hpp>
 
 #include "prof/data.hpp"
 #include "prof/profiler.hpp"
 #include "prof/profiler_scope_keeper.hpp"
+#include "qtimeline_view.hpp"
 
 std::chrono::high_resolution_clock::time_point last_frame_time;
 
@@ -173,27 +174,30 @@ int main(int argc, char** argv)
 
     QTabWidget window;
     window.show();
+    QPushButton button("Update");
+    button.show();
 
     HeavyDrawnWidget widget;
     widget.show();
 
-    std::unordered_map<std::string, QTimeLine*> timelines;
-
-    QTimer timer;
-    timer.setInterval(10);
+    std::unordered_map<std::string, QTimeLineView*> timelines;
     QColor thread_color = QColor::fromRgb(QRandomGenerator::global()->generate());
-    QObject::connect(&timer, &QTimer::timeout, [ & ]() {
+
+    // QTimer timer;
+    // timer.setInterval(1000);
+    // QObject::connect(&timer, &QTimer::timeout, [ & ]() {
+    button.connect(&button, &QPushButton::clicked, [ & ]() {
         auto threads = prof::known_threads();
 
         for (const auto& thd : threads)
             {
                 auto                it       = timelines.find(thd);
-                QTimeLine*          timeline = nullptr;
+                QTimeLineView*      timeline = nullptr;
                 QStandardItemModel* model    = nullptr;
 
                 if (it == timelines.end())
                     {
-                        timeline = new QTimeLine();
+                        timeline = new QTimeLineView();
                         model    = new QStandardItemModel(timeline);
 
                         timeline->show();
@@ -210,37 +214,39 @@ int main(int argc, char** argv)
                 model->clear();
 
                 std::vector<QStandardItem*> depths;
+                int                         n = 1;
 
-                prof::apply_for_data(thd, [ &thread_color, &depths, &model ](const prof::data_sample& data) -> bool {
-                    QStandardItem* layer = nullptr;
-                    if (data.depth() >= depths.size() || depths[ data.depth() ] == nullptr)
-                        {
-                            depths.resize(std::max(data.depth() + 1, depths.size()), nullptr);
-                            layer                  = new QStandardItem(QString("Depth %1").arg(data.depth()));
-                            depths[ data.depth() ] = layer;
-                            model->appendRow(layer);
-                        }
-                    else
-                        {
-                            layer = depths[ data.depth() ];
-                        }
+                prof::apply_for_data(
+                    thd, [ &thread_color, &depths, &n, &model ](const prof::data_sample& data) -> bool {
+                        QStandardItem* layer = nullptr;
+                        if (data.depth() >= depths.size() || depths[ data.depth() ] == nullptr)
+                            {
+                                depths.resize(std::max(data.depth() + 1, depths.size()), nullptr);
+                                layer                  = new QStandardItem(QString("Depth %1").arg(data.depth()));
+                                depths[ data.depth() ] = layer;
+                                model->appendRow(layer);
+                            }
+                        else
+                            {
+                                layer = depths[ data.depth() ];
+                            }
 
-                    QStandardItem* section = new QStandardItem("Section");
-                    layer->setData(thread_color, Qt::DecorationRole);
-                    layer->setData(QString("Depth %1").arg(data.depth()), Qt::ToolTipRole);
-                    auto  diff      = data.start() - last_frame_time;
-                    float diffFloat = std::chrono::duration_cast<std::chrono::duration<float>>(diff).count();
-                    section->setData(data.name().c_str(), Qt::ToolTipRole);
-                    section->setData(diffFloat, Qt::UserRole + 1);
-                    diffFloat =
-                        std::chrono::duration_cast<std::chrono::duration<float>>(data.end() - data.start()).count();
-                    section->setData(diffFloat, Qt::UserRole + 2);
-                    layer->appendColumn({ section });
-                    return true;
-                });
+                        QStandardItem* section = new QStandardItem(data.name().c_str());
+                        layer->setData(thread_color, Qt::DecorationRole);
+                        layer->setData(QString("Depth %1").arg(data.depth()), Qt::ToolTipRole);
+                        auto  diff      = data.start() - last_frame_time + std::chrono::milliseconds(10);
+                        float diffFloat = std::chrono::duration_cast<std::chrono::duration<float>>(diff).count();
+                        section->setData(data.name().c_str(), Qt::ToolTipRole);
+                        section->setData(diffFloat, Qt::UserRole + 1);
+                        diffFloat =
+                            std::chrono::duration_cast<std::chrono::duration<float>>(data.end() - data.start()).count();
+                        section->setData(diffFloat, Qt::UserRole + 2);
+                        model->setItem(layer->row(), n++, section);
+                        return true;
+                    });
             }
     });
-    timer.start();
+    // timer.start();
 
     return app.exec();
 }

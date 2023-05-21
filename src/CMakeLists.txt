@@ -1,5 +1,5 @@
-set(SOURCES qtimeline.cpp qtimeline_item_delegate.cpp)
-set(HEADERS qtimeline.hpp qtimeline_item_delegate.hpp)
+set(SOURCES qtimeline_view.cpp qtimeline_item_delegate.cpp)
+set(HEADERS qtimeline_view.hpp qtimeline_item_delegate.hpp)
 
 find_package(Qt6 REQUIRED Widgets)
 
