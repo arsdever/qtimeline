@@ -234,7 +234,7 @@ int main(int argc, char** argv)
                         QStandardItem* section = new QStandardItem(data.name().c_str());
                         layer->setData(thread_color, Qt::DecorationRole);
                         layer->setData(QString("Depth %1").arg(data.depth()), Qt::ToolTipRole);
-                        auto  diff      = data.start() - last_frame_time + std::chrono::milliseconds(10);
+                        auto  diff      = data.start() - last_frame_time;
                         float diffFloat = std::chrono::duration_cast<std::chrono::duration<float>>(diff).count();
                         section->setData(data.name().c_str(), Qt::ToolTipRole);
                         section->setData(diffFloat, Qt::UserRole + 1);
