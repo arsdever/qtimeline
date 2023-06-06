@@ -15,39 +15,6 @@
 
 std::chrono::high_resolution_clock::time_point last_frame_time;
 
-class unit
-{
-public:
-    unit() { }
-
-    void multithreaded_load()
-    {
-        std::vector<std::thread> threads;
-        for (int i = 0; i < 4; ++i)
-            {
-                threads.emplace_back([ this ]() {
-                    while (counter > 0)
-                        {
-                            auto                        p = prof::profile(__func__);
-                            std::lock_guard<std::mutex> guard(mutex);
-                            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                            --counter;
-                        }
-
-                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                });
-            }
-
-        for (auto& thread : threads)
-            {
-                thread.join();
-            }
-    }
-
-    long       counter = 10;
-    std::mutex mutex;
-};
-
 void setupDarkThemePalette()
 {
     qApp->setStyle(QStyleFactory::create("Fusion"));
@@ -73,6 +40,40 @@ void setupDarkThemePalette()
     qApp->setStyleSheet("QToolTip { color: #ffffff; background-color: #2a82da; "
                         "border: 1px solid white; }");
 }
+
+class unit
+{
+public:
+    unit() { }
+
+    void slow_motion()
+    {
+        auto       lock = prof::profile(__func__);
+        static int a[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+        while (std::ranges::next_permutation(a).found) { }
+    }
+
+    void long_running_task(int n = 10)
+    {
+        auto lock = prof::profile(__func__);
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+        if (n)
+            long_running_task(n - 1);
+    }
+
+    long long_running_task_2branch(int n = 10)
+    {
+        auto lock = prof::profile(__func__);
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        if (!n || n == 1)
+            {
+                return 1;
+            }
+
+        return long_running_task_2branch(n - 1) + long_running_task_2branch(n - 2);
+    }
+};
 
 class HeavyDrawnWidget : public QWidget
 {
@@ -167,8 +168,16 @@ int main(int argc, char** argv)
 {
     QApplication app(argc, argv);
 
-    // unit u;
-    // u.multithreaded_load();
+    last_frame_time = std::chrono::high_resolution_clock::now();
+    unit u {};
+    u.slow_motion();
+
+    std::thread t1 { [ &u ]() { u.long_running_task_2branch(); } };
+    std::thread t2 { [ &u ]() { u.long_running_task_2branch(); } };
+    std::thread t3 { [ &u ]() { u.long_running_task_2branch(); } };
+    t1.join();
+    t2.join();
+    t3.join();
 
     setupDarkThemePalette();
 
@@ -177,8 +186,7 @@ int main(int argc, char** argv)
     QPushButton button("Update");
     button.show();
 
-    HeavyDrawnWidget widget;
-    widget.show();
+    // HeavyDrawnWidget widget; widget.show();
 
     std::unordered_map<std::string, QTimeLineView*> timelines;
     QColor thread_color = QColor::fromRgb(QRandomGenerator::global()->generate());

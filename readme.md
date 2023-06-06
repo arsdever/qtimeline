@@ -1,12 +1,10 @@
-# This is a simple QT timeline visualizer
+# QTimeLine
 
-The initial aim of the project is to provide a way to visualize the profiler data collected by project at
-[arsdever/prof](https://github.com/arsdever/prof).
+![Screenshot](doc/img/profiler_timeline.png)
 
-## New version in development (Model/View approach)
+A Qt based widget for visualizing time-based data.
 
-I'm trying to change the architecture of the project to use Model/View approach.
-Please checkout `model-view-approach` branch for the latest changes.
+## Notes
 
-Such an example you can see under `sample` project. Here is the outcome whe the program is run.
-![](doc/img/profiler_timeline.png)
+The project is currently in a very early stage. It is not yet ready for production use.
+The project is currently being developed following Model/View architecture.
