@@ -1,12 +1,9 @@
-set (SOURCES timeline.cpp single_timeline.cpp timeline_item_widget.cpp timeline_timestamps.cpp)
-set (HEADERS timeline.hpp single_timeline.hpp timeline_item_widget.hpp timeline_item.hpp timeline_data_provider.hpp timeline_timestamps.hpp)
+set(SOURCES qtimeline_view.cpp qtimeline_item_delegate.cpp)
+set(HEADERS qtimeline_view.hpp qtimeline_item_delegate.hpp)
 
-find_package (Qt6Widgets REQUIRED)
+find_package(Qt6 REQUIRED Widgets)
 
-add_library (timeline STATIC ${HEADERS} ${SOURCES})
+add_library(qtimeline STATIC ${HEADERS} ${SOURCES})
 
-target_link_libraries (timeline Qt::Widgets)
-target_include_directories (timeline
-PUBLIC
-	${CMAKE_CURRENT_SOURCE_DIR}
-)
+target_link_libraries(qtimeline Qt::Widgets)
+target_include_directories(qtimeline PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

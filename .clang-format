@@ -46,7 +46,6 @@ BreakBeforeInheritanceComma: true
 BreakBeforeTernaryOperators: false
 BreakConstructorInitializers: BeforeComma
 BreakInheritanceList: BeforeComma
-BreakBeforeTernaryOperators: true
 BreakConstructorInitializersBeforeComma: true
 BreakAfterJavaFieldAnnotations: false
 BreakStringLiterals: true
@@ -135,4 +134,3 @@ TabWidth:        4
 UseCRLF:         false
 UseTab:          Never
 ...
-
