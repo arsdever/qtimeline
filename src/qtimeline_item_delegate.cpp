@@ -9,8 +9,6 @@
 
 #include "qtimeline_item_delegate.hpp"
 
-#define MAGNIFICATION 50000.0f
-
 QTimeLineItemDelegate::QTimeLineItemDelegate(QObject* parent)
     : QAbstractItemDelegate(parent)
 {
@@ -19,10 +17,10 @@ QTimeLineItemDelegate::QTimeLineItemDelegate(QObject* parent)
 void QTimeLineItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
     painter->save();
-    const QStandardItemModel* model        = static_cast<const QStandardItemModel*>(index.model());
-    QStandardItem*            item         = model->itemFromIndex(index);
-    QStandardItem*            firstItem    = model->item(index.row(), 0);
-    QColor                    color        = firstItem->data(Qt::DecorationRole).value<QColor>();
+    const QStandardItemModel* model     = static_cast<const QStandardItemModel*>(index.model());
+    QStandardItem*            item      = model->itemFromIndex(index);
+    QStandardItem*            firstItem = model->item(index.row(), 0);
+    QColor                    color     = firstItem->data(Qt::DecorationRole).value<QColor>();
 
     // draw background
     constexpr float thickness = 0.0f;
