@@ -42,6 +42,7 @@ private:
      * Indicates how many pixels correspond to one micro.
      */
     double                _scale       = 100.0;
+    int                   _timestampsSectionHeight = 30;
     int                   _layerHeight = 20;
     QPersistentModelIndex _hoverIndex;
 };

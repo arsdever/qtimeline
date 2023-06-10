@@ -31,8 +31,12 @@ void QTimeLineView::paintEvent(QPaintEvent* event)
             QColor bgPenColor  = item.data(Qt::DecorationRole).value<QColor>().darker(200);
             QColor bgFillColor = item.data(Qt::DecorationRole).value<QColor>().darker(150);
             painter.setPen(bgPenColor);
-            painter.fillRect(0, i * _layerHeight, event->rect().width(), _layerHeight, bgFillColor);
-            painter.drawLine(0, i * _layerHeight, event->rect().width(), i * _layerHeight);
+            painter.fillRect(
+                0, i * _layerHeight + _timestampsSectionHeight, event->rect().width(), _layerHeight, bgFillColor);
+            painter.drawLine(0,
+                             i * _layerHeight + _timestampsSectionHeight,
+                             event->rect().width(),
+                             i * _layerHeight + _timestampsSectionHeight);
             for (int j = 0; j < model()->columnCount(); ++j)
                 {
                     auto segment = model()->index(i, j);
@@ -54,7 +58,7 @@ void QTimeLineView::paintEvent(QPaintEvent* event)
 
 QModelIndex QTimeLineView::indexAt(const QPoint& point) const
 {
-    int row = point.y() / _layerHeight;
+    int row = (point.y() - _timestampsSectionHeight) / _layerHeight;
     for (int i = 0; i < model()->columnCount(); ++i)
         {
             if (visualRect(model()->index(row, i)).contains(point))
@@ -73,7 +77,7 @@ QRect QTimeLineView::visualRect(const QModelIndex& index) const
     double duration  = index.data(Qt::UserRole + 2).toDouble();
     int    x         = durationToPixels(std::chrono::duration<double>(startTime));
     int    width     = durationToPixels(std::chrono::duration<double>(duration));
-    return { x, index.row() * _layerHeight, width, _layerHeight };
+    return { x, index.row() * _layerHeight + _timestampsSectionHeight, width, _layerHeight };
 }
 
 int QTimeLineView::horizontalOffset() const { return 0; }
