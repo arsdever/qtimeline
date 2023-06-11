@@ -34,6 +34,7 @@ protected:
 
 private:
     double durationToPixels(std::chrono::duration<double> value) const;
+    std::chrono::duration<double> pixelsToDuration(int value) const;
 
 private:
     /**
@@ -41,8 +42,9 @@ private:
      *
      * Indicates how many pixels correspond to one micro.
      */
-    double                _scale       = 100.0;
+    double                _scale                   = 1.0;
     int                   _timestampsSectionHeight = 30;
-    int                   _layerHeight = 20;
+    double                _timestampsPer100Pixels  = 1.0;
+    int                   _layerHeight             = 20;
     QPersistentModelIndex _hoverIndex;
 };

@@ -23,6 +23,37 @@ void QTimeLineView::paintEvent(QPaintEvent* event)
     QPainter painter(viewport());
     painter.setRenderHint(QPainter::Antialiasing, true);
 
+    // check if header part of the window should be updated
+    QRect timestampsRectIntersection = event->rect() & QRect(0, 0, event->rect().width(), _timestampsSectionHeight);
+    if (!timestampsRectIntersection.isEmpty())
+        {
+            painter.setBrush(palette().color(QPalette::Window).lighter(130));
+            painter.setPen(Qt::black);
+
+            painter.fillRect(timestampsRectIntersection, painter.brush());
+            painter.drawLine(0, _timestampsSectionHeight, event->rect().width(), _timestampsSectionHeight);
+
+            painter.setPen(QPen(palette().color(QPalette::WindowText), 1));
+            for (int i = 0; i < event->rect().width(); i += 100)
+                {
+                    QString text     = tr("%1us").arg(pixelsToDuration(i).count() * 1000000);
+                    QRect   textRect = painter.fontMetrics().boundingRect(text);
+
+                    textRect.translate(i - textRect.width() / 2, _timestampsSectionHeight - 13);
+                    if (textRect.right() > event->rect().width() - 5)
+                        {
+                            textRect.translate(event->rect().width() - textRect.right() - 5, 0);
+                        }
+                    else if (textRect.left() < 5)
+                        {
+                            textRect.translate(-textRect.left(), 0);
+                        }
+
+                    painter.drawLine(i, _timestampsSectionHeight - 10, i, _timestampsSectionHeight);
+                    painter.drawText(textRect, text);
+                }
+        }
+
     QStyleOptionViewItem option;
     QAbstractItemView::initViewItemOption(&option);
     for (int i = 0; i < model()->rowCount(); ++i)
@@ -142,4 +173,9 @@ bool QTimeLineView::viewportEvent(QEvent* event)
 double QTimeLineView::durationToPixels(std::chrono::duration<double> value) const
 {
     return value.count() * _scale * 1000;
+}
+
+std::chrono::duration<double> QTimeLineView::pixelsToDuration(int value) const
+{
+    return std::chrono::duration<double>(value / _scale / 1000);
 }
