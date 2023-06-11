@@ -85,6 +85,13 @@ void QTimeLineView::paintEvent(QPaintEvent* event)
                         }
                 }
         }
+
+    for (int i = static_cast<int>(event->rect().left() / 100) * 100; i < event->rect().right(); i += 100)
+        {
+            qDebug() << i;
+            painter.setPen(QColor(0, 0, 0, 50));
+            painter.drawLine(i, std::max(_timestampsSectionHeight, event->rect().top()), i, event->rect().bottom());
+        }
 }
 
 QModelIndex QTimeLineView::indexAt(const QPoint& point) const
