@@ -23,6 +23,37 @@ void QTimeLineView::paintEvent(QPaintEvent* event)
     QPainter painter(viewport());
     painter.setRenderHint(QPainter::Antialiasing, true);
 
+    // check if header part of the window should be updated
+    QRect timestampsRectIntersection = event->rect() & QRect(0, 0, event->rect().width(), _timestampsSectionHeight);
+    if (!timestampsRectIntersection.isEmpty())
+        {
+            painter.setBrush(palette().color(QPalette::Window).lighter(130));
+            painter.setPen(Qt::black);
+
+            painter.fillRect(timestampsRectIntersection, painter.brush());
+            painter.drawLine(0, _timestampsSectionHeight, event->rect().width(), _timestampsSectionHeight);
+
+            painter.setPen(QPen(palette().color(QPalette::WindowText), 1));
+            for (int i = 0; i < event->rect().width(); i += 100)
+                {
+                    QString text     = tr("%1us").arg(pixelsToDuration(i).count() * 1000000);
+                    QRect   textRect = painter.fontMetrics().boundingRect(text);
+
+                    textRect.translate(i - textRect.width() / 2, _timestampsSectionHeight - 13);
+                    if (textRect.right() > event->rect().width() - 5)
+                        {
+                            textRect.translate(event->rect().width() - textRect.right() - 5, 0);
+                        }
+                    else if (textRect.left() < 5)
+                        {
+                            textRect.translate(-textRect.left(), 0);
+                        }
+
+                    painter.drawLine(i, _timestampsSectionHeight - 10, i, _timestampsSectionHeight);
+                    painter.drawText(textRect, text);
+                }
+        }
+
     QStyleOptionViewItem option;
     QAbstractItemView::initViewItemOption(&option);
     for (int i = 0; i < model()->rowCount(); ++i)
@@ -31,8 +62,12 @@ void QTimeLineView::paintEvent(QPaintEvent* event)
             QColor bgPenColor  = item.data(Qt::DecorationRole).value<QColor>().darker(200);
             QColor bgFillColor = item.data(Qt::DecorationRole).value<QColor>().darker(150);
             painter.setPen(bgPenColor);
-            painter.fillRect(0, i * _layerHeight, event->rect().width(), _layerHeight, bgFillColor);
-            painter.drawLine(0, i * _layerHeight, event->rect().width(), i * _layerHeight);
+            painter.fillRect(
+                0, i * _layerHeight + _timestampsSectionHeight, event->rect().width(), _layerHeight, bgFillColor);
+            painter.drawLine(0,
+                             i * _layerHeight + _timestampsSectionHeight,
+                             event->rect().width(),
+                             i * _layerHeight + _timestampsSectionHeight);
             for (int j = 0; j < model()->columnCount(); ++j)
                 {
                     auto segment = model()->index(i, j);
@@ -50,11 +85,18 @@ void QTimeLineView::paintEvent(QPaintEvent* event)
                         }
                 }
         }
+
+    for (int i = static_cast<int>(event->rect().left() / 100) * 100; i < event->rect().right(); i += 100)
+        {
+            qDebug() << i;
+            painter.setPen(QColor(0, 0, 0, 50));
+            painter.drawLine(i, std::max(_timestampsSectionHeight, event->rect().top()), i, event->rect().bottom());
+        }
 }
 
 QModelIndex QTimeLineView::indexAt(const QPoint& point) const
 {
-    int row = point.y() / _layerHeight;
+    int row = (point.y() - _timestampsSectionHeight) / _layerHeight;
     for (int i = 0; i < model()->columnCount(); ++i)
         {
             if (visualRect(model()->index(row, i)).contains(point))
@@ -73,7 +115,7 @@ QRect QTimeLineView::visualRect(const QModelIndex& index) const
     double duration  = index.data(Qt::UserRole + 2).toDouble();
     int    x         = durationToPixels(std::chrono::duration<double>(startTime));
     int    width     = durationToPixels(std::chrono::duration<double>(duration));
-    return { x, index.row() * _layerHeight, width, _layerHeight };
+    return { x, index.row() * _layerHeight + _timestampsSectionHeight, width, _layerHeight };
 }
 
 int QTimeLineView::horizontalOffset() const { return 0; }
@@ -138,4 +180,9 @@ bool QTimeLineView::viewportEvent(QEvent* event)
 double QTimeLineView::durationToPixels(std::chrono::duration<double> value) const
 {
     return value.count() * _scale * 1000;
+}
+
+std::chrono::duration<double> QTimeLineView::pixelsToDuration(int value) const
+{
+    return std::chrono::duration<double>(value / _scale / 1000);
 }
