@@ -11,6 +11,8 @@ public:
     explicit QTimeLineView(QWidget* parent = nullptr);
     ~QTimeLineView() override;
 
+    void setScale(double value);
+
 protected:
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;

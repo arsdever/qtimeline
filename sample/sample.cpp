@@ -1,12 +1,16 @@
 #include <QApplication>
+#include <QMainWindow>
 #include <QPainter>
 #include <QPushButton>
 #include <QRandomGenerator>
 #include <QScrollArea>
+#include <QSlider>
 #include <QStandardItemModel>
 #include <QString>
 #include <QStyleFactory>
 #include <QTimer>
+#include <QToolBar>
+#include <QToolButton>
 
 #include "prof/data.hpp"
 #include "prof/profiler.hpp"
@@ -181,10 +185,19 @@ int main(int argc, char** argv)
 
     setupDarkThemePalette();
 
-    QTabWidget window;
+    QMainWindow window;
+
+    QTabWidget* centralWidget = new QTabWidget(&window);
+    window.setCentralWidget(centralWidget);
     window.show();
-    QPushButton button("Update");
-    button.show();
+
+    QToolButton* button = new QToolButton();
+    button->setText("Update");
+    QToolBar* toolbar = window.addToolBar("toolbar");
+    toolbar->addWidget(button);
+    QSlider* slider = new QSlider(Qt::Horizontal);
+    slider->setRange(-100, 100);
+    toolbar->addWidget(slider);
 
     // HeavyDrawnWidget widget; widget.show();
 
@@ -194,7 +207,7 @@ int main(int argc, char** argv)
     // QTimer timer;
     // timer.setInterval(1000);
     // QObject::connect(&timer, &QTimer::timeout, [ & ]() {
-    button.connect(&button, &QPushButton::clicked, [ & ]() {
+    button->connect(button, &QToolButton::clicked, [ & ]() {
         auto threads = prof::known_threads();
 
         for (const auto& thd : threads)
@@ -208,10 +221,19 @@ int main(int argc, char** argv)
                         timeline = new QTimeLineView();
                         model    = new QStandardItemModel(timeline);
 
+                        slider->connect(slider, &QSlider::valueChanged, [ slider, timeline ](int old_value) {
+                            double old_min = slider->minimum();
+                            double old_max = slider->maximum();
+                            double new_min = 0.05;
+                            double new_max = 50;
+                            double new_value =
+                                (old_value - old_min) * (new_max - new_min) / (old_max - old_min) + new_min;
+                            timeline->setScale(new_value);
+                        });
                         timeline->show();
                         timeline->setModel(model);
                         timelines.emplace(thd, timeline);
-                        window.addTab(timeline, QString("Thread #%1").arg(thd.c_str()));
+                        centralWidget->addTab(timeline, QString("Thread #%1").arg(thd.c_str()));
                     }
                 else
                     {
