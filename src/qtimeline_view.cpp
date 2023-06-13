@@ -24,6 +24,13 @@ QTimeLineView::QTimeLineView(QWidget* parent)
 
 QTimeLineView::~QTimeLineView() = default;
 
+void QTimeLineView::setScale(double value)
+{
+    _scale = value;
+    updateScrollBars();
+    viewport()->update();
+}
+
 void QTimeLineView::paintEvent(QPaintEvent* event)
 {
     QPainter painter(viewport());
