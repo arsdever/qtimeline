@@ -105,7 +105,6 @@ void QTimeLineView::paintEvent(QPaintEvent* event)
 
                     option.rect = visualRect(segment);
                     option.state.setFlag(QStyle::State_MouseOver, segment == _hoverIndex);
-                    if (i == 0 && j == 1)
                     if (option.rect.intersects(rectWithoutTimestamps))
                         {
                             option.rect = option.rect & rectWithoutTimestamps;
