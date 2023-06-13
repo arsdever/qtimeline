@@ -3,6 +3,7 @@
 #include <QHoverEvent>
 #include <QPaintEvent>
 #include <QPainter>
+#include <QScrollBar>
 #include <QToolTip>
 
 #include "qtimeline_view.hpp"
@@ -34,11 +35,15 @@ void QTimeLineView::paintEvent(QPaintEvent* event)
             painter.drawLine(0, _timestampsSectionHeight, event->rect().width(), _timestampsSectionHeight);
 
             painter.setPen(QPen(palette().color(QPalette::WindowText), 1));
-            for (int i = 0; i < event->rect().width(); i += 100)
+            for (int i = static_cast<int>(_scrollOffset.x() / 100 + 1) * 100;
+                 i < event->rect().width() + _scrollOffset.x();
+                 i += 100)
                 {
+                    // int     position = i + _scrollOffset.x() / 100;
                     QString text     = tr("%1us").arg(pixelsToDuration(i).count() * 1000000);
                     QRect   textRect = painter.fontMetrics().boundingRect(text);
 
+                    textRect.translate(-_scrollOffset.x(), 0);
                     textRect.translate(i - textRect.width() / 2, _timestampsSectionHeight - 13);
                     if (textRect.right() > event->rect().width() - 5)
                         {
@@ -46,10 +51,13 @@ void QTimeLineView::paintEvent(QPaintEvent* event)
                         }
                     else if (textRect.left() < 5)
                         {
-                            textRect.translate(-textRect.left(), 0);
+                            textRect.translate(-textRect.left() + 5, 0);
                         }
 
-                    painter.drawLine(i, _timestampsSectionHeight - 10, i, _timestampsSectionHeight);
+                    painter.drawLine(i - _scrollOffset.x(),
+                                     _timestampsSectionHeight - 10,
+                                     i - _scrollOffset.x(),
+                                     _timestampsSectionHeight);
                     painter.drawText(textRect, text);
                 }
         }
@@ -77,21 +85,43 @@ void QTimeLineView::paintEvent(QPaintEvent* event)
                         }
 
                     option.rect = visualRect(segment);
+                    // option.rect.translate(-_scrollOffset.x(), -_scrollOffset.y());
                     option.state.setFlag(QStyle::State_MouseOver, segment == _hoverIndex);
+                    if (i == 0 && j == 1)
+                        qDebug() << (option.state & QStyle::State_MouseOver) << event->rect() << option.rect
+                                 << visualRect(segment) << _scrollOffset;
                     if (option.rect.intersects(event->rect()))
                         {
-                            option.rect = visualRect(segment) & event->rect();
+                            // option.rect = visualRect(segment) & event->rect();
+                            option.rect = option.rect & event->rect();
+                            qDebug() << (option.state & QStyle::State_MouseOver) << option.rect;
                             itemDelegate()->paint(&painter, option, segment);
                         }
                 }
         }
 
-    for (int i = static_cast<int>(event->rect().left() / 100) * 100; i < event->rect().right(); i += 100)
+    for (int i = static_cast<int>((event->rect().left() - _scrollOffset.x()) / 100 + 1) * 100;
+         i < event->rect().right();
+         i += 100)
         {
             qDebug() << i;
             painter.setPen(QColor(0, 0, 0, 50));
-            painter.drawLine(i, std::max(_timestampsSectionHeight, event->rect().top()), i, event->rect().bottom());
+            painter.drawLine(i - _scrollOffset.x(),
+                             std::max(_timestampsSectionHeight, event->rect().top()),
+                             i - _scrollOffset.x(),
+                             event->rect().bottom());
         }
+}
+
+void QTimeLineView::resizeEvent(QResizeEvent* event)
+{
+    updateScrollBars();
+    QAbstractItemView::resizeEvent(event);
+}
+
+void QTimeLineView::showEvent(QShowEvent* event) {
+    updateScrollBars();
+    QAbstractItemView::showEvent(event);
 }
 
 QModelIndex QTimeLineView::indexAt(const QPoint& point) const
@@ -109,14 +139,7 @@ QModelIndex QTimeLineView::indexAt(const QPoint& point) const
 
 void QTimeLineView::scrollTo(const QModelIndex& index, ScrollHint hint) { }
 
-QRect QTimeLineView::visualRect(const QModelIndex& index) const
-{
-    double startTime = index.data(Qt::UserRole + 1).toDouble();
-    double duration  = index.data(Qt::UserRole + 2).toDouble();
-    int    x         = durationToPixels(std::chrono::duration<double>(startTime));
-    int    width     = durationToPixels(std::chrono::duration<double>(duration));
-    return { x, index.row() * _layerHeight + _timestampsSectionHeight, width, _layerHeight };
-}
+QRect QTimeLineView::visualRect(const QModelIndex& index) const { return itemRect(index).translated(-_scrollOffset); }
 
 int QTimeLineView::horizontalOffset() const { return 0; }
 
@@ -161,7 +184,7 @@ bool QTimeLineView::viewportEvent(QEvent* event)
                 const QModelIndex    index = indexAt(he->pos());
                 QStyleOptionViewItem option;
                 initViewItemOption(&option);
-                option.rect = visualRect(index);
+                option.rect = visualRect(index).translated(-_scrollOffset.x(), -_scrollOffset.y());
                 option.state |= (index == currentIndex() ? QStyle::State_HasFocus : QStyle::State_None);
 
                 QAbstractItemDelegate* delegate = itemDelegateForIndex(index);
@@ -175,6 +198,43 @@ bool QTimeLineView::viewportEvent(QEvent* event)
             }
         }
     return QAbstractScrollArea::viewportEvent(event);
+}
+
+void QTimeLineView::scrollContentsBy(int dx, int dy)
+{
+    _scrollOffset -= QPoint(dx, dy);
+    qDebug() << _scrollOffset;
+    QAbstractItemView::scrollContentsBy(dx, dy);
+}
+
+QRect QTimeLineView::itemRect(const QModelIndex& index) const
+{
+    double startTime = index.data(Qt::UserRole + 1).toDouble();
+    double duration  = index.data(Qt::UserRole + 2).toDouble();
+    int    x         = durationToPixels(std::chrono::duration<double>(startTime));
+    int    width     = durationToPixels(std::chrono::duration<double>(duration));
+    return QRect(x, index.row() * _layerHeight + _timestampsSectionHeight, width, _layerHeight);
+}
+
+void QTimeLineView::updateScrollBars()
+{
+    if (model() == nullptr)
+        return;
+
+    int max = 0;
+    for (int i = 0; i < model()->rowCount(); ++i)
+        {
+            auto item = model()->index(i, model()->columnCount() - 1);
+            if (!item.isValid())
+                {
+                    continue;
+                }
+            max = std::max(max, itemRect(item).right() - viewport()->width());
+        }
+
+    if (max > viewport()->width())
+        horizontalScrollBar()->setRange(0, max);
+    // verticalScrollBar()->setRange(0, model()->rowCount() * _layerHeight);
 }
 
 double QTimeLineView::durationToPixels(std::chrono::duration<double> value) const

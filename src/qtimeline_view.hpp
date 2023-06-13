@@ -13,6 +13,8 @@ public:
 
 protected:
     void paintEvent(QPaintEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
+    void showEvent(QShowEvent* event) override;
 
 #pragma region QAbstractItemView
 
@@ -32,8 +34,17 @@ protected:
 
 #pragma endregion
 
+#pragma region QAbstractScrollArea
+
+public:
+    void scrollContentsBy(int dx, int dy) override;
+
+#pragma endregion
+
 private:
-    double durationToPixels(std::chrono::duration<double> value) const;
+    QRect                         itemRect(const QModelIndex& index) const;
+    void                          updateScrollBars();
+    double                        durationToPixels(std::chrono::duration<double> value) const;
     std::chrono::duration<double> pixelsToDuration(int value) const;
 
 private:
@@ -47,4 +58,5 @@ private:
     double                _timestampsPer100Pixels  = 1.0;
     int                   _layerHeight             = 20;
     QPersistentModelIndex _hoverIndex;
+    QPoint                _scrollOffset;
 };
