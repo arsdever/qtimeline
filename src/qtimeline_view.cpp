@@ -101,7 +101,7 @@ void QTimeLineView::paintEvent(QPaintEvent* event)
         }
 
     for (int i = static_cast<int>((event->rect().left() - _scrollOffset.x()) / 100 + 1) * 100;
-         i < event->rect().right();
+         i < event->rect().right() + _scrollOffset.x();
          i += 100)
         {
             qDebug() << i;
@@ -119,7 +119,8 @@ void QTimeLineView::resizeEvent(QResizeEvent* event)
     QAbstractItemView::resizeEvent(event);
 }
 
-void QTimeLineView::showEvent(QShowEvent* event) {
+void QTimeLineView::showEvent(QShowEvent* event)
+{
     updateScrollBars();
     QAbstractItemView::showEvent(event);
 }
