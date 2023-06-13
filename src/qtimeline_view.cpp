@@ -15,6 +15,11 @@ QTimeLineView::QTimeLineView(QWidget* parent)
 {
     viewport()->setAttribute(Qt::WA_Hover);
     setItemDelegate(new QTimeLineItemDelegate(this));
+    horizontalScrollBar()->setSingleStep(10);
+    horizontalScrollBar()->setPageStep(100);
+    verticalScrollBar()->setSingleStep(_layerHeight);
+    verticalScrollBar()->setPageStep(_layerHeight * 5);
+    viewport()->setMinimumHeight(_layerHeight + _timestampsSectionHeight);
 }
 
 QTimeLineView::~QTimeLineView() = default;
@@ -66,16 +71,31 @@ void QTimeLineView::paintEvent(QPaintEvent* event)
     QAbstractItemView::initViewItemOption(&option);
     for (int i = 0; i < model()->rowCount(); ++i)
         {
-            auto   item        = model()->index(i, 0);
-            QColor bgPenColor  = item.data(Qt::DecorationRole).value<QColor>().darker(200);
-            QColor bgFillColor = item.data(Qt::DecorationRole).value<QColor>().darker(150);
+            int horizontalSeparatorLineY =
+                i * _layerHeight + _timestampsSectionHeight - _scrollOffset.y() + _layerHeight;
+
+            if (horizontalSeparatorLineY < _timestampsSectionHeight)
+                {
+                    continue;
+                }
+            if (horizontalSeparatorLineY > viewport()->height() + _layerHeight)
+                {
+                    break;
+                }
+
+            auto   item                  = model()->index(i, 0);
+            QColor bgPenColor            = item.data(Qt::DecorationRole).value<QColor>().darker(200);
+            QColor bgFillColor           = item.data(Qt::DecorationRole).value<QColor>().darker(150);
+            QRect  rectWithoutTimestamps = event->rect();
+            rectWithoutTimestamps.setTop(_timestampsSectionHeight);
             painter.setPen(bgPenColor);
-            painter.fillRect(
-                0, i * _layerHeight + _timestampsSectionHeight, event->rect().width(), _layerHeight, bgFillColor);
-            painter.drawLine(0,
-                             i * _layerHeight + _timestampsSectionHeight,
-                             event->rect().width(),
-                             i * _layerHeight + _timestampsSectionHeight);
+            painter.fillRect(QRect(0,
+                                   i * _layerHeight + _timestampsSectionHeight - _scrollOffset.y(),
+                                   rectWithoutTimestamps.width(),
+                                   _layerHeight) &
+                                 rectWithoutTimestamps,
+                             bgFillColor);
+            painter.drawLine(0, horizontalSeparatorLineY, rectWithoutTimestamps.width(), horizontalSeparatorLineY);
             for (int j = 0; j < model()->columnCount(); ++j)
                 {
                     auto segment = model()->index(i, j);
@@ -85,16 +105,11 @@ void QTimeLineView::paintEvent(QPaintEvent* event)
                         }
 
                     option.rect = visualRect(segment);
-                    // option.rect.translate(-_scrollOffset.x(), -_scrollOffset.y());
                     option.state.setFlag(QStyle::State_MouseOver, segment == _hoverIndex);
                     if (i == 0 && j == 1)
-                        qDebug() << (option.state & QStyle::State_MouseOver) << event->rect() << option.rect
-                                 << visualRect(segment) << _scrollOffset;
-                    if (option.rect.intersects(event->rect()))
+                    if (option.rect.intersects(rectWithoutTimestamps))
                         {
-                            // option.rect = visualRect(segment) & event->rect();
-                            option.rect = option.rect & event->rect();
-                            qDebug() << (option.state & QStyle::State_MouseOver) << option.rect;
+                            option.rect = option.rect & rectWithoutTimestamps;
                             itemDelegate()->paint(&painter, option, segment);
                         }
                 }
@@ -104,7 +119,6 @@ void QTimeLineView::paintEvent(QPaintEvent* event)
          i < event->rect().right() + _scrollOffset.x();
          i += 100)
         {
-            qDebug() << i;
             painter.setPen(QColor(0, 0, 0, 50));
             painter.drawLine(i - _scrollOffset.x(),
                              std::max(_timestampsSectionHeight, event->rect().top()),
@@ -204,7 +218,6 @@ bool QTimeLineView::viewportEvent(QEvent* event)
 void QTimeLineView::scrollContentsBy(int dx, int dy)
 {
     _scrollOffset -= QPoint(dx, dy);
-    qDebug() << _scrollOffset;
     QAbstractItemView::scrollContentsBy(dx, dy);
 }
 
@@ -234,7 +247,8 @@ void QTimeLineView::updateScrollBars()
         }
 
     horizontalScrollBar()->setRange(0, max);
-    // verticalScrollBar()->setRange(0, model()->rowCount() * _layerHeight);
+    verticalScrollBar()->setRange(0,
+                                  model()->rowCount() * _layerHeight + _timestampsSectionHeight - viewport()->height());
 }
 
 double QTimeLineView::durationToPixels(std::chrono::duration<double> value) const
