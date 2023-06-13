@@ -233,8 +233,7 @@ void QTimeLineView::updateScrollBars()
             max = std::max(max, itemRect(item).right() - viewport()->width());
         }
 
-    if (max > viewport()->width())
-        horizontalScrollBar()->setRange(0, max);
+    horizontalScrollBar()->setRange(0, max);
     // verticalScrollBar()->setRange(0, model()->rowCount() * _layerHeight);
 }
 
