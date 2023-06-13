@@ -44,7 +44,6 @@ void QTimeLineView::paintEvent(QPaintEvent* event)
                  i < event->rect().width() + _scrollOffset.x();
                  i += 100)
                 {
-                    // int     position = i + _scrollOffset.x() / 100;
                     QString text     = tr("%1us").arg(pixelsToDuration(i).count() * 1000000);
                     QRect   textRect = painter.fontMetrics().boundingRect(text);
 
